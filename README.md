@@ -10,6 +10,7 @@ A web-based gym management system built with HTML, PHP, and MySQL.
 
 ## Features
 - Admin Login
+- Dashboard (Live Stats)
 - Member Management
 - Trainer Management
 - Activity Management
