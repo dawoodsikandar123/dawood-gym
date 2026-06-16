@@ -1,4 +1,4 @@
-# Dawood Gym Management System
+## Gym Management System:
 
 A web-based gym management system built with HTML, PHP, and MySQL.
 
