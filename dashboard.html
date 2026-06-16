@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Dashboard - Dawood Gym</title>
+<link rel="stylesheet" href="style.css">
+<script>if(!sessionStorage.getItem("loggedIn")){window.location.href="login.html";}</script>
+<style>
+.card-members::before{background:linear-gradient(90deg,#3498db,#5b9bd5);}
+.card-trainers::before{background:linear-gradient(90deg,#9b59b6,#a88beb);}
+.card-paid::before{background:linear-gradient(90deg,#2ecc71,#5cb85c);}
+.card-unpaid::before{background:linear-gradient(90deg,#e74c3c,#ff7675);}
+.card-attendance::before{background:linear-gradient(90deg,#f1c40f,#ffeaa7);}
+</style>
+</head><body>
+<div class="sidebar">
+  <div class="logo">💪 Dawood Gym</div>
+  <a href="dashboard.html" class="active"><span>📊</span>Dashboard</a>
+  <a href="members.html"><span>👤</span>Members</a>
+  <a href="activities.html"><span>🏋️</span>Activities</a>
+  <a href="trainers.html"><span>🎽</span>Trainers</a>
+  <a href="attendance.html"><span>📋</span>Attendance</a>
+  <a href="payments.html"><span>💰</span>Payments</a>
+  <a href="#" onclick="sessionStorage.removeItem('loggedIn');window.location.href='login.html';"><span>🚪</span>Logout</a>
+</div>
+<div class="main">
+  <div class="page-title">📊 Dashboard</div>
+  <div class="cards" id="dashboard-cards">
+    <div class="card card-members"><h2 id="stat-members">—</h2><p>Total Members</p></div>
+    <div class="card card-trainers"><h2 id="stat-trainers">—</h2><p>Total Trainers</p></div>
+    <div class="card card-paid"><h2 id="stat-paid">—</h2><p>Paid Members</p></div>
+    <div class="card card-unpaid"><h2 id="stat-unpaid">—</h2><p>Unpaid Members</p></div>
+    <div class="card card-attendance"><h2 id="stat-attendance">—</h2><p>Today's Attendance</p></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h3>👤 Recent Members</h3>
+      <a href="members.html"><button class="btn btn-primary">View All</button></a>
+    </div>
+    <div class="table-wrap">
+      <table style="width:100%;table-layout:fixed;"><thead><tr>
+        <th style="width:10%;text-align:left;padding:12px 16px;">ID</th>
+        <th style="width:20%;text-align:left;padding:12px 16px;">Name</th>
+        <th style="width:18%;text-align:left;padding:12px 16px;">Phone</th>
+        <th style="width:17%;text-align:left;padding:12px 16px;">Activity</th>
+        <th style="width:17%;text-align:left;padding:12px 16px;">Trainer</th>
+        <th style="width:10%;text-align:left;padding:12px 16px;">Fee</th>
+        <th style="width:8%;text-align:left;padding:12px 16px;">Status</th>
+      </tr></thead>
+      <tbody id="recent-members"><tr><td colspan="7" style="text-align:center;color:#64748b;padding:20px;">Loading...</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h3>💰 Recent Payments</h3>
+      <a href="payments.html"><button class="btn btn-primary">View All</button></a>
+    </div>
+    <div class="table-wrap">
+      <table style="width:100%;table-layout:fixed;"><thead><tr>
+        <th style="width:15%;text-align:left;padding:12px 16px;">ID</th>
+        <th style="width:30%;text-align:left;padding:12px 16px;">Member</th>
+        <th style="width:20%;text-align:left;padding:12px 16px;">Amount</th>
+        <th style="width:20%;text-align:left;padding:12px 16px;">Date</th>
+        <th style="width:15%;text-align:left;padding:12px 16px;">Status</th>
+      </tr></thead>
+      <tbody id="recent-payments"><tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Loading...</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadDashboard() {
+  const res  = await fetch('api/dashboard.php');
+  const data = await res.json();
+
+  document.getElementById('stat-members').textContent    = data.stats.total_members;
+  document.getElementById('stat-trainers').textContent   = data.stats.total_trainers;
+  document.getElementById('stat-paid').textContent       = data.stats.paid_members;
+  document.getElementById('stat-unpaid').textContent     = data.stats.unpaid_members;
+  document.getElementById('stat-attendance').textContent = data.stats.today_attendance;
+
+  document.getElementById('recent-members').innerHTML = data.members.map(m => `
+    <tr>
+      <td style="padding:12px 16px;">${m.member_code}</td>
+      <td style="padding:12px 16px;">${m.full_name}</td>
+      <td style="padding:12px 16px;">${m.phone}</td>
+      <td style="padding:12px 16px;">${m.activity}</td>
+      <td style="padding:12px 16px;">${m.trainer}</td>
+      <td style="padding:12px 16px;">Rs ${parseInt(m.monthly_fee).toLocaleString()}</td>
+      <td style="padding:12px 16px;"><span class="badge ${m.payment_status.toLowerCase()}">${m.payment_status}</span></td>
+    </tr>`).join('');
+
+  document.getElementById('recent-payments').innerHTML = data.payments.map(p => `
+    <tr>
+      <td style="padding:12px 16px;">${p.payment_code}</td>
+      <td style="padding:12px 16px;">${p.member_name}</td>
+      <td style="padding:12px 16px;">Rs ${parseInt(p.amount).toLocaleString()}</td>
+      <td style="padding:12px 16px;">${p.payment_date||'—'}</td>
+      <td style="padding:12px 16px;"><span class="badge ${p.status.toLowerCase()}">${p.status}</span></td>
+    </tr>`).join('');
+}
+
+loadDashboard();
+</script>
+</body></html>

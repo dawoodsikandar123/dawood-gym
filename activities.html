@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Activities - Dawood Gym</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.activity-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:30px;}
+.activity-card{background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:1px solid #334155;border-radius:14px;padding:25px 15px;text-align:center;position:relative;overflow:hidden;transition:transform 0.3s ease,box-shadow 0.3s ease,border-color 0.3s ease;box-shadow:0 8px 20px rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;}
+.activity-card:hover{transform:translateY(-6px);}
+.activity-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:4px;}
+.activity-card h3{font-size:18px;font-weight:700;color:#f8fafc;margin-bottom:8px;}
+.activity-card .stat-badge{background:rgba(255,255,255,0.05);padding:3px 10px;border-radius:20px;font-size:12px;color:#cbd5e1;margin-bottom:12px;border:1px solid rgba(255,255,255,0.05);}
+.activity-card .fee-badge{font-size:15px;font-weight:bold;color:#f1c40f;margin-bottom:15px;background:rgba(241,196,15,0.1);padding:2px 10px;border-radius:6px;border:1px solid rgba(241,196,15,0.2);}
+.activity-card .trainer-label{font-size:10px;text-transform:uppercase;color:#64748b;letter-spacing:0.8px;margin-bottom:6px;}
+.activity-card .trainer-chips{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;}
+.activity-card .trainer-chip{background:rgba(255,255,255,0.04);color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.05);}
+.icon-wrapper{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:15px;border:1px solid rgba(255,255,255,0.1);}
+.section{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:25px;margin-bottom:30px;}
+.section h3{font-size:16px;margin-bottom:20px;color:#f8fafc;font-weight:600;border-left:4px solid #c0392b;padding-left:10px;}
+</style>
+<script>if(!sessionStorage.getItem("loggedIn")){window.location.href="login.html";}</script>
+</head><body>
+<div class="sidebar">
+  <div class="logo">💪 Dawood Gym</div>
+  <a href="dashboard.html"><span>📊</span>Dashboard</a>
+  <a href="members.html"><span>👤</span>Members</a>
+  <a href="activities.html" class="active"><span>🏋️</span>Activities</a>
+  <a href="trainers.html"><span>🎽</span>Trainers</a>
+  <a href="attendance.html"><span>📋</span>Attendance</a>
+  <a href="payments.html"><span>💰</span>Payments</a>
+  <a href="#" onclick="sessionStorage.removeItem('loggedIn');window.location.href='login.html';"><span>🚪</span>Logout</a>
+</div>
+<div class="main">
+  <div class="page-title">🏋️ Activities</div>
+  <div class="activity-grid" id="activity-grid">
+    <p style="color:#64748b;">Loading...</p>
+  </div>
+  <div class="section">
+    <h3>Activities Summary</h3>
+    <div class="table-wrap">
+      <table id="summary-table" style="width:100%;table-layout:fixed;">
+        <thead><tr>
+          <th style="width:20%;text-align:left;padding:12px 16px;">Activity</th>
+          <th style="width:15%;text-align:left;padding:12px 16px;">Monthly Fee</th>
+          <th style="width:65%;text-align:left;padding:12px 16px;">Assigned Trainers</th>
+        </tr></thead>
+        <tbody id="summary-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const icons     = { 'Gym Workout':'🏋️', 'Cardio':'🏃', 'Weight Training':'💪', 'Yoga':'🧘' };
+const colors    = { 'Gym Workout':'#c0392b', 'Cardio':'#2980b9', 'Weight Training':'#27ae60', 'Yoga':'#8e44ad' };
+
+async function loadActivities() {
+  const [actRes, trRes] = await Promise.all([
+    fetch('api/activities.php'),
+    fetch('api/trainers.php')
+  ]);
+  const activities = await actRes.json();
+  const trainers   = await trRes.json();
+
+  // Cards
+  const grid = document.getElementById('activity-grid');
+  grid.innerHTML = activities.map(a => {
+    const assigned = trainers.filter(t =>
+      t.specializations && t.specializations.split(', ').includes(a.name)
+    );
+    const color = colors[a.name] || '#c0392b';
+    const icon  = icons[a.name]  || '🏋️';
+    return `
+      <div class="activity-card" style="border-top:4px solid ${color};">
+        <div class="icon-wrapper">${icon}</div>
+        <h3>${a.name}</h3>
+        <div class="fee-badge">Rs ${parseInt(a.monthly_fee).toLocaleString()} / month</div>
+        <div class="trainer-label">Assigned Trainers</div>
+        <div class="trainer-chips">
+          ${assigned.length
+            ? assigned.map(t => `<span class="trainer-chip">${t.full_name}</span>`).join('')
+            : '<span class="trainer-chip" style="color:#ef4444;">No trainer</span>'
+          }
+        </div>
+      </div>`;
+  }).join('');
+
+  // Summary table
+  document.getElementById('summary-tbody').innerHTML = activities.map(a => {
+    const assigned = trainers.filter(t =>
+      t.specializations && t.specializations.split(', ').includes(a.name)
+    ).map(t => t.full_name).join(', ') || '—';
+    return `<tr style="vertical-align:middle;">
+      <td style="padding:12px 16px;white-space:nowrap;">${icons[a.name]||'🏋️'} ${a.name}</td>
+      <td style="padding:12px 16px;white-space:nowrap;">Rs ${parseInt(a.monthly_fee).toLocaleString()}</td>
+      <td style="padding:12px 16px;">${assigned.split(', ').map(name => `<span style="display:inline-block;white-space:nowrap;background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:4px;margin:2px 3px;font-size:13px;">${name}</span>`).join('')}</td>
+    </tr>`;
+  }).join('');
+}
+
+loadActivities();
+</script>
+</body></html>

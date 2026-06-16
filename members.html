@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Members - Dawood Gym</title>
+<link rel="stylesheet" href="style.css">
+<script>if(!sessionStorage.getItem("loggedIn")){window.location.href="login.html";}</script>
+</head><body>
+<div class="sidebar">
+  <div class="logo">💪 Dawood Gym</div>
+  <a href="dashboard.html"><span>📊</span>Dashboard</a>
+  <a href="members.html" class="active"><span>👤</span>Members</a>
+  <a href="activities.html"><span>🏋️</span>Activities</a>
+  <a href="trainers.html"><span>🎽</span>Trainers</a>
+  <a href="attendance.html"><span>📋</span>Attendance</a>
+  <a href="payments.html"><span>💰</span>Payments</a>
+  <a href="#" onclick="sessionStorage.removeItem('loggedIn');window.location.href='login.html';"><span>🚪</span>Logout</a>
+</div>
+
+<div class="main">
+  <div class="page-title">👤 Members</div>
+  <div class="section">
+    <div class="section-header">
+      <h3>All Members</h3>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Member</button>
+    </div>
+    <div class="table-wrap">
+      <table style="width:100%;table-layout:fixed;">
+        <thead>
+          <tr>
+            <th style="width:8%;padding:12px 10px;text-align:left;">ID</th>
+            <th style="width:15%;padding:12px 10px;text-align:left;">Name</th>
+            <th style="width:13%;padding:12px 10px;text-align:left;">Phone</th>
+            <th style="width:9%;padding:12px 10px;text-align:left;">Gender</th>
+            <th style="width:6%;padding:12px 10px;text-align:left;">Age</th>
+            <th style="width:13%;padding:12px 10px;text-align:left;">Activity</th>
+            <th style="width:13%;padding:12px 10px;text-align:left;">Trainer</th>
+            <th style="width:8%;padding:12px 10px;text-align:left;">Fee</th>
+            <th style="width:8%;padding:12px 10px;text-align:left;">Status</th>
+            <th style="width:17%;padding:12px 10px;text-align:left;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="members-tbody">
+          <tr><td colspan="10" style="text-align:center;color:#64748b;padding:30px;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>➕ Add New Member</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Full Name</label><input type="text" id="add-name" placeholder="Enter full name"></div>
+      <div class="form-group"><label>Phone Number</label><input type="text" id="add-phone" placeholder="03xxxxxxxxx"></div>
+      <div class="form-group"><label>Emergency Contact</label><input type="text" id="add-emergency" placeholder="Auto fills on gender select"></div>
+      <div class="form-group"><label>Gender</label>
+        <select id="add-gender" onchange="onGenderChange()">
+          <option value="">-- Select Gender --</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Age</label><input type="number" id="add-age" placeholder="Age"></div>
+      <div class="form-group"><label>Address</label><input type="text" id="add-address" placeholder="Address"></div>
+      <div class="form-group"><label>Join Date</label><input type="date" id="add-joindate"></div>
+      <div class="form-group"><label>Activity</label>
+        <select id="add-activity" onchange="onActivityChange()">
+          <option value="">-- Select Activity --</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Assigned Trainer</label>
+        <select id="add-trainer">
+          <option value="">-- Select Activity First --</option>
+        </select>
+        <div id="add-trainer-bio" style="display:none;margin-top:8px;background:#1e293b;padding:10px;border-radius:6px;color:#94a3b8;font-size:13px;line-height:1.7;"></div>
+      </div>
+      <div class="form-group"><label>Monthly Fee (Rs)</label><input type="number" id="add-fee" placeholder="Auto fills on activity select"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveMember()">Save Member</button>
+      <button class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Edit Member</h3>
+    <input type="hidden" id="edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Full Name</label><input type="text" id="edit-name"></div>
+      <div class="form-group"><label>Phone Number</label><input type="text" id="edit-phone"></div>
+      <div class="form-group"><label>Emergency Contact</label><input type="text" id="edit-emergency"></div>
+      <div class="form-group"><label>Gender</label>
+        <select id="edit-gender">
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Age</label><input type="number" id="edit-age"></div>
+      <div class="form-group"><label>Address</label><input type="text" id="edit-address"></div>
+      <div class="form-group"><label>Activity</label>
+        <select id="edit-activity" onchange="onEditActivityChange()">
+          <option value="">-- Select Activity --</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Assigned Trainer</label>
+        <select id="edit-trainer"></select>
+        <div id="edit-trainer-bio" style="display:none;margin-top:8px;background:#1e293b;padding:10px;border-radius:6px;color:#94a3b8;font-size:13px;line-height:1.7;"></div>
+      </div>
+      <div class="form-group"><label>Monthly Fee</label><input type="number" id="edit-fee"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="updateMember()">Update</button>
+      <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal">
+    <h3>👁️ Member Details</h3>
+    <div class="table-wrap"><table id="view-table"></table></div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal('viewModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let activitiesData = [];
+let trainersData   = [];
+
+const emergencyMap = { 'Male': '032734826110', 'Female': '09988877887' };
+
+// ── Gender change → emergency auto fill ──
+function onGenderChange() {
+  const gender = document.getElementById('add-gender').value;
+  document.getElementById('add-emergency').value = emergencyMap[gender] || '';
+}
+
+// ── Activity change → fee + trainers ──
+function onActivityChange() {
+  const actId = document.getElementById('add-activity').value;
+  const act   = activitiesData.find(a => a.id == actId);
+  document.getElementById('add-fee').value = act ? act.monthly_fee : '';
+  fillTrainers('add-trainer', actId);
+}
+
+function onEditActivityChange() {
+  const actId = document.getElementById('edit-activity').value;
+  const act   = activitiesData.find(a => a.id == actId);
+  document.getElementById('edit-fee').value = act ? act.monthly_fee : '';
+  fillTrainers('edit-trainer', actId);
+}
+
+// ── Fill trainers by activity ──
+function fillTrainers(selectId, actId) {
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = '';
+  const act = activitiesData.find(a => a.id == actId);
+  if (!act) { sel.innerHTML = '<option value="">-- Select Activity First --</option>'; return; }
+
+  const filtered = trainersData.filter(t =>
+    t.specializations && t.specializations.split(', ').includes(act.name)
+  );
+
+  if (!filtered.length) {
+    sel.innerHTML = '<option value="">No trainer available</option>';
+    return;
+  }
+  filtered.forEach(t => sel.innerHTML += `<option value="${t.id}" data-bio="${t.bio || ''}" data-exp="${t.experience_yrs || ''}" data-spec="${t.specializations || ''}">${t.full_name}</option>`);
+
+  // Show bio when trainer selected
+  sel.onchange = function() {
+    const opt = sel.options[sel.selectedIndex];
+    const bio  = opt?.dataset?.bio  || '';
+    const exp  = opt?.dataset?.exp  || '';
+    const spec = opt?.dataset?.spec || '';
+    const bioBoxId = selectId === 'add-trainer' ? 'add-trainer-bio' : 'edit-trainer-bio';
+    const box = document.getElementById(bioBoxId);
+    if (box) {
+      if (bio || exp || spec) {
+        box.style.display = 'block';
+        box.innerHTML = `
+          ${exp ? `<div>📅 <b>Experience:</b> ${exp} years</div>` : ''}
+          ${spec ? `<div>🏋️ <b>Specializations:</b> ${spec}</div>` : ''}
+          ${bio ? `<div>📝 <b>Bio:</b> ${bio}</div>` : ''}
+        `;
+      } else {
+        box.style.display = 'none';
+      }
+    }
+  };
+}
+
+// ── Load activities + trainers ──
+async function loadMeta() {
+  const [actRes, trRes] = await Promise.all([
+    fetch('api/activities.php'),
+    fetch('api/trainers.php')
+  ]);
+  activitiesData = await actRes.json();
+  trainersData   = await trRes.json();
+
+  // Fill add-activity dropdown
+  const addAct = document.getElementById('add-activity');
+  activitiesData.forEach(a => {
+    addAct.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+  });
+
+  // Fill edit-activity dropdown
+  const editAct = document.getElementById('edit-activity');
+  activitiesData.forEach(a => {
+    editAct.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+  });
+}
+
+// ── Load members table ──
+async function loadMembers() {
+  const res  = await fetch('api/members.php?action=list');
+  const data = await res.json();
+  const tbody = document.getElementById('members-tbody');
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#64748b;padding:30px;">No members found — Add your first member!</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(m => `
+    <tr>
+      <td style="padding:12px 10px;">${m.member_code}</td>
+      <td style="padding:12px 10px;">${m.full_name}</td>
+      <td style="padding:12px 10px;">${m.phone}</td>
+      <td style="padding:12px 10px;"><span class="badge ${m.gender.toLowerCase()}">${m.gender}</span></td>
+      <td style="padding:12px 10px;">${m.age}</td>
+      <td style="padding:12px 10px;">${m.activity}</td>
+      <td style="padding:12px 10px;">${m.trainer}</td>
+      <td style="padding:12px 10px;">Rs ${parseInt(m.monthly_fee).toLocaleString()}</td>
+      <td style="padding:12px 10px;"><span class="badge ${m.payment_status.toLowerCase()}">${m.payment_status}</span></td>
+      <td style="padding:12px 10px;white-space:nowrap;">
+        <button class="btn-view" onclick="viewMember(${m.id})">View</button>
+        <button class="btn-edit" onclick="editMember(${m.id})">Edit</button>
+        <button class="btn-delete" onclick="deleteMember(${m.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ── Open Add Modal ──
+function openAddModal() {
+  // Reset form
+  document.getElementById('add-name').value      = '';
+  document.getElementById('add-phone').value     = '';
+  document.getElementById('add-emergency').value = '';
+  document.getElementById('add-gender').value    = '';
+  document.getElementById('add-age').value       = '';
+  document.getElementById('add-address').value   = '';
+  document.getElementById('add-fee').value       = '';
+  document.getElementById('add-activity').value  = '';
+  document.getElementById('add-trainer').innerHTML = '<option value="">-- Select Activity First --</option>';
+  openModal('addModal');
+}
+
+// ── Save member ──
+async function saveMember() {
+  const data = {
+    full_name:         document.getElementById('add-name').value,
+    phone:             document.getElementById('add-phone').value,
+    emergency_contact: document.getElementById('add-emergency').value,
+    gender:            document.getElementById('add-gender').value,
+    age:               document.getElementById('add-age').value,
+    address:           document.getElementById('add-address').value,
+    join_date:         document.getElementById('add-joindate').value,
+    activity_id:       document.getElementById('add-activity').value,
+    trainer_id:        document.getElementById('add-trainer').value,
+    monthly_fee:       document.getElementById('add-fee').value
+  };
+
+  if (!data.full_name || !data.phone || !data.gender || !data.activity_id) {
+    alert('Name, Phone, Gender, Activity required!'); return;
+  }
+
+  const res = await fetch('api/members.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+  if (result.success) { closeModal('addModal'); loadMembers(); }
+  else alert('Error saving member!');
+}
+
+// ── View member ──
+async function viewMember(id) {
+  const res = await fetch(`api/members.php?action=single&id=${id}`);
+  const m   = await res.json();
+  document.getElementById('view-table').innerHTML = `
+    <tr><td><b>Member ID</b></td><td>${m.member_code}</td></tr>
+    <tr><td><b>Full Name</b></td><td>${m.full_name}</td></tr>
+    <tr><td><b>Phone</b></td><td>${m.phone}</td></tr>
+    <tr><td><b>Emergency</b></td><td>${m.emergency_contact || '—'}</td></tr>
+    <tr><td><b>Gender</b></td><td>${m.gender}</td></tr>
+    <tr><td><b>Age</b></td><td>${m.age}</td></tr>
+    <tr><td><b>Address</b></td><td>${m.address || '—'}</td></tr>
+    <tr><td><b>Join Date</b></td><td>${m.join_date}</td></tr>
+    <tr><td><b>Activity</b></td><td>${m.activity}</td></tr>
+    <tr><td><b>Trainer</b></td><td>${m.trainer}</td></tr>
+    <tr><td><b>Monthly Fee</b></td><td>Rs ${parseInt(m.monthly_fee).toLocaleString()}</td></tr>
+    <tr><td><b>Status</b></td><td><span class="badge ${m.payment_status.toLowerCase()}">${m.payment_status}</span></td></tr>
+  `;
+  openModal('viewModal');
+}
+
+// ── Edit member ──
+async function editMember(id) {
+  const res = await fetch(`api/members.php?action=single&id=${id}`);
+  const m   = await res.json();
+
+  document.getElementById('edit-id').value        = m.id;
+  document.getElementById('edit-name').value      = m.full_name;
+  document.getElementById('edit-phone').value     = m.phone;
+  document.getElementById('edit-emergency').value = m.emergency_contact || '';
+  document.getElementById('edit-gender').value    = m.gender;
+  document.getElementById('edit-age').value       = m.age;
+  document.getElementById('edit-address').value   = m.address || '';
+  document.getElementById('edit-fee').value       = m.monthly_fee;
+
+  const actSel = document.getElementById('edit-activity');
+  activitiesData.forEach(a => { if (a.name === m.activity) actSel.value = a.id; });
+  onEditActivityChange();
+
+  setTimeout(() => {
+    const trSel = document.getElementById('edit-trainer');
+    for (let o of trSel.options) { if (o.text === m.trainer) { o.selected = true; break; } }
+  }, 100);
+
+  openModal('editModal');
+}
+
+// ── Update member ──
+async function updateMember() {
+  const data = {
+    id:                document.getElementById('edit-id').value,
+    full_name:         document.getElementById('edit-name').value,
+    phone:             document.getElementById('edit-phone').value,
+    emergency_contact: document.getElementById('edit-emergency').value,
+    gender:            document.getElementById('edit-gender').value,
+    age:               document.getElementById('edit-age').value,
+    address:           document.getElementById('edit-address').value,
+    join_date:         new Date().toISOString().split('T')[0],
+    activity_id:       document.getElementById('edit-activity').value,
+    trainer_id:        document.getElementById('edit-trainer').value,
+    monthly_fee:       document.getElementById('edit-fee').value
+  };
+  const res = await fetch('api/members.php', {
+    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+  });
+  const result = await res.json();
+  if (result.success) { closeModal('editModal'); loadMembers(); }
+  else alert('Error updating!');
+}
+
+// ── Delete member ──
+async function deleteMember(id) {
+  if (!confirm('Delete this member?')) return;
+  const res = await fetch(`api/members.php?action=delete&id=${id}`, { method: 'DELETE' });
+  const result = await res.json();
+  if (result.success) loadMembers();
+  else alert('Error deleting!');
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+window.onclick = e => { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); };
+
+// ── Init ──
+document.getElementById('add-joindate').valueAsDate = new Date();
+loadMeta().then(() => loadMembers());
+</script>
+</body></html>

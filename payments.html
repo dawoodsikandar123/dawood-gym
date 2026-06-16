@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Payments - Dawood Gym</title>
+<link rel="stylesheet" href="style.css">
+<script>if(!sessionStorage.getItem("loggedIn")){window.location.href="login.html";}</script>
+</head><body>
+<div class="sidebar">
+  <div class="logo">💪 Dawood Gym</div>
+  <a href="dashboard.html"><span>📊</span>Dashboard</a>
+  <a href="members.html"><span>👤</span>Members</a>
+  <a href="activities.html"><span>🏋️</span>Activities</a>
+  <a href="trainers.html"><span>🎽</span>Trainers</a>
+  <a href="attendance.html"><span>📋</span>Attendance</a>
+  <a href="payments.html" class="active"><span>💰</span>Payments</a>
+  <a href="#" onclick="sessionStorage.removeItem('loggedIn');window.location.href='login.html';"><span>🚪</span>Logout</a>
+</div>
+<div class="main">
+  <div class="page-title">💰 Payments</div>
+  <div class="section">
+    <div class="section-header">
+      <h3>Payment Records</h3>
+      <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Payment</button>
+    </div>
+    <div class="table-wrap">
+      <table style="width:100%;table-layout:fixed;">
+        <thead><tr>
+          <th style="width:10%;padding:12px 14px;text-align:left;">ID</th>
+          <th style="width:20%;padding:12px 14px;text-align:left;">Member</th>
+          <th style="width:18%;padding:12px 14px;text-align:left;">Activity</th>
+          <th style="width:13%;padding:12px 14px;text-align:left;">Amount</th>
+          <th style="width:15%;padding:12px 14px;text-align:left;">Date</th>
+          <th style="width:12%;padding:12px 14px;text-align:left;">Status</th>
+          <th style="width:12%;padding:12px 14px;text-align:left;">Actions</th>
+        </tr></thead>
+        <tbody id="payments-tbody"><tr><td colspan="7" style="text-align:center;color:#64748b;padding:30px;">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>➕ Add Payment</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Member</label><select id="add-member" onchange="fillMemberDetails()"></select></div>
+      <div class="form-group"><label>Activity</label><input type="text" id="add-activity" readonly></div>
+      <div class="form-group"><label>Amount (Rs)</label><input type="number" id="add-amount" readonly></div>
+      <div class="form-group"><label>Payment Date</label><input type="date" id="add-date"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="add-status" onchange="handleStatusChange('add')">
+          <option value="Paid">Paid</option><option value="Unpaid">Unpaid</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="savePayment()">Save</button>
+      <button class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Update Payment</h3>
+    <input type="hidden" id="edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Member</label><input type="text" id="edit-member" readonly></div>
+      <div class="form-group"><label>Activity</label><input type="text" id="edit-activity" readonly></div>
+      <div class="form-group"><label>Amount</label><input type="number" id="edit-amount" readonly></div>
+      <div class="form-group"><label>Payment Date</label><input type="date" id="edit-date"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="edit-status" onchange="handleStatusChange('edit')">
+          <option value="Paid">Paid</option><option value="Unpaid">Unpaid</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="updatePayment()">Update</button>
+      <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let membersCache = [];
+
+async function loadMembers() {
+  const res = await fetch('api/members.php?action=list');
+  membersCache = await res.json();
+  const sel = document.getElementById('add-member');
+  sel.innerHTML = membersCache.map(m => `<option value="${m.id}" data-activity="${m.activity}" data-fee="${m.monthly_fee}">${m.full_name}</option>`).join('');
+  fillMemberDetails();
+}
+
+function fillMemberDetails() {
+  const sel = document.getElementById('add-member');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('add-activity').value = opt.dataset.activity;
+  document.getElementById('add-amount').value   = opt.dataset.fee;
+}
+
+function handleStatusChange(prefix) {
+  const status = document.getElementById(`${prefix}-status`).value;
+  const dateEl = document.getElementById(`${prefix}-date`);
+  dateEl.value = status === 'Paid' ? new Date().toISOString().split('T')[0] : '';
+}
+
+async function loadPayments() {
+  const res  = await fetch('api/payments.php');
+  const data = await res.json();
+  document.getElementById('payments-tbody').innerHTML = data.map(p => `
+    <tr>
+      <td style="padding:12px 14px;">${p.payment_code}</td>
+      <td style="padding:12px 14px;">${p.member_name}</td>
+      <td style="padding:12px 14px;">${p.activity}</td>
+      <td style="padding:12px 14px;">Rs ${parseInt(p.amount).toLocaleString()}</td>
+      <td style="padding:12px 14px;">${p.payment_date || '—'}</td>
+      <td style="padding:12px 14px;"><span class="badge ${p.status.toLowerCase()}">${p.status}</span></td>
+      <td style="padding:12px 14px;white-space:nowrap;"><button class="btn-edit" onclick="openEdit(${p.id},'${p.member_name}','${p.activity}',${p.amount},'${p.payment_date||''}','${p.status}')">Update</button></td>
+    </tr>`).join('');
+}
+
+async function savePayment() {
+  const sel = document.getElementById('add-member');
+  const mid = sel.value;
+  const member = membersCache.find(m => m.id == mid);
+  const data = {
+    member_id:   mid,
+    activity_id: member ? member.activity_id : '',
+    amount:      document.getElementById('add-amount').value,
+    payment_date:document.getElementById('add-date').value,
+    status:      document.getElementById('add-status').value
+  };
+  await fetch('api/payments.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  closeModal('addModal'); loadPayments();
+}
+
+function openEdit(id, member, activity, amount, date, status) {
+  document.getElementById('edit-id').value       = id;
+  document.getElementById('edit-member').value   = member;
+  document.getElementById('edit-activity').value = activity;
+  document.getElementById('edit-amount').value   = amount;
+  document.getElementById('edit-date').value     = date;
+  document.getElementById('edit-status').value   = status;
+  openModal('editModal');
+}
+
+async function updatePayment() {
+  const data = {
+    id:           document.getElementById('edit-id').value,
+    payment_date: document.getElementById('edit-date').value,
+    status:       document.getElementById('edit-status').value
+  };
+  await fetch('api/payments.php', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  closeModal('editModal'); loadPayments();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+window.onclick = e => { if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); };
+
+document.getElementById('add-date').value = new Date().toISOString().split('T')[0];
+loadMembers();
+loadPayments();
+</script>
+</body></html>

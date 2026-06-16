@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Trainers - Dawood Gym</title>
+<link rel="stylesheet" href="style.css">
+<script>if(!sessionStorage.getItem("loggedIn")){window.location.href="login.html";}</script>
+</head><body>
+<div class="sidebar">
+  <div class="logo">💪 Dawood Gym</div>
+  <a href="dashboard.html"><span>📊</span>Dashboard</a>
+  <a href="members.html"><span>👤</span>Members</a>
+  <a href="activities.html"><span>🏋️</span>Activities</a>
+  <a href="trainers.html" class="active"><span>🎽</span>Trainers</a>
+  <a href="attendance.html"><span>📋</span>Attendance</a>
+  <a href="payments.html"><span>💰</span>Payments</a>
+  <a href="#" onclick="sessionStorage.removeItem('loggedIn');window.location.href='login.html';"><span>🚪</span>Logout</a>
+</div>
+<div class="main">
+  <div class="page-title">🎽 Trainers</div>
+  <div class="section">
+    <div class="section-header">
+      <h3>All Trainers</h3>
+      <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Trainer</button>
+    </div>
+    <div class="table-wrap">
+      <table style="width:100%;table-layout:fixed;">
+        <thead><tr>
+          <th style="width:7%;padding:12px 14px;text-align:left;">ID</th>
+          <th style="width:13%;padding:12px 14px;text-align:left;">Name</th>
+          <th style="width:13%;padding:12px 14px;text-align:left;">Phone</th>
+          <th style="width:10%;padding:12px 14px;text-align:left;">Gender</th>
+          <th style="width:15%;padding:12px 14px;text-align:left;">Specialization</th>
+          <th style="width:11%;padding:12px 14px;text-align:left;">Experience</th>
+          <th style="width:13%;padding:12px 14px;text-align:left;">Join Date</th>
+          <th style="width:18%;padding:12px 14px;text-align:left;">Actions</th>
+        </tr></thead>
+        <tbody id="trainers-tbody"><tr><td colspan="8" style="text-align:center;color:#64748b;padding:30px;">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>➕ Add Trainer</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Full Name</label><input type="text" id="add-name" placeholder="Trainer name"></div>
+      <div class="form-group"><label>Phone</label><input type="text" id="add-phone" placeholder="03xxxxxxxxx"></div>
+      <div class="form-group"><label>Gender</label><select id="add-gender"><option>Male</option><option>Female</option></select></div>
+      <div class="form-group"><label>Experience (Years)</label><input type="number" id="add-exp" placeholder="Years"></div>
+      <div class="form-group"><label>Join Date</label><input type="date" id="add-join"></div>
+      <div class="form-group"><label>Bio</label><input type="text" id="add-bio" placeholder="Short bio"></div>
+      <div class="form-group" style="grid-column:span 2"><label>Specializations</label>
+        <div id="add-specs" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:5px;"></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveTrainer()">Save</button>
+      <button class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Edit Trainer</h3>
+    <input type="hidden" id="edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Full Name</label><input type="text" id="edit-name"></div>
+      <div class="form-group"><label>Phone</label><input type="text" id="edit-phone"></div>
+      <div class="form-group"><label>Gender</label><select id="edit-gender"><option>Male</option><option>Female</option></select></div>
+      <div class="form-group"><label>Experience (Years)</label><input type="number" id="edit-exp"></div>
+      <div class="form-group"><label>Join Date</label><input type="date" id="edit-join"></div>
+      <div class="form-group"><label>Bio</label><input type="text" id="edit-bio"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="updateTrainer()">Update</button>
+      <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let activitiesCache = [];
+
+async function loadActivities() {
+  const res = await fetch('api/activities.php');
+  activitiesCache = await res.json();
+  const container = document.getElementById('add-specs');
+  container.innerHTML = activitiesCache.map(a =>
+    `<label style="display:flex;align-items:center;gap:5px;color:#cbd5e1;font-size:13px;">
+      <input type="checkbox" value="${a.id}"> ${a.name}
+    </label>`
+  ).join('');
+}
+
+async function loadTrainers() {
+  const res  = await fetch('api/trainers.php');
+  const data = await res.json();
+  document.getElementById('trainers-tbody').innerHTML = data.map(t => `
+    <tr>
+      <td style="padding:12px 14px;">${t.trainer_code}</td>
+      <td style="padding:12px 14px;">${t.full_name}</td>
+      <td style="padding:12px 14px;">${t.phone}</td>
+      <td style="padding:12px 14px;"><span class="badge ${t.gender.toLowerCase()}">${t.gender}</span></td>
+      <td style="padding:12px 14px;">${t.specializations || '—'}</td>
+      <td style="padding:12px 14px;">${t.experience_yrs} Years</td>
+      <td style="padding:12px 14px;">${t.join_date}</td>
+      <td style="padding:12px 14px;white-space:nowrap;">
+        <button class="btn-edit" onclick="openEdit(${t.id},'${t.full_name}','${t.phone}','${t.gender}',${t.experience_yrs},'${t.join_date}','${t.bio||''}')">Edit</button>
+        <button class="btn-delete" onclick="deleteTrainer(${t.id})">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function saveTrainer() {
+  const checks = document.querySelectorAll('#add-specs input:checked');
+  const data = {
+    full_name:      document.getElementById('add-name').value,
+    phone:          document.getElementById('add-phone').value,
+    gender:         document.getElementById('add-gender').value,
+    experience_yrs: document.getElementById('add-exp').value,
+    join_date:      document.getElementById('add-join').value,
+    bio:            document.getElementById('add-bio').value,
+    activity_ids:   Array.from(checks).map(c => c.value)
+  };
+  await fetch('api/trainers.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  closeModal('addModal'); loadTrainers();
+}
+
+function openEdit(id, name, phone, gender, exp, join, bio) {
+  document.getElementById('edit-id').value    = id;
+  document.getElementById('edit-name').value  = name;
+  document.getElementById('edit-phone').value = phone;
+  document.getElementById('edit-gender').value= gender;
+  document.getElementById('edit-exp').value   = exp;
+  document.getElementById('edit-join').value  = join;
+  document.getElementById('edit-bio').value   = bio;
+  openModal('editModal');
+}
+
+async function updateTrainer() {
+  const data = {
+    id:             document.getElementById('edit-id').value,
+    full_name:      document.getElementById('edit-name').value,
+    phone:          document.getElementById('edit-phone').value,
+    gender:         document.getElementById('edit-gender').value,
+    experience_yrs: document.getElementById('edit-exp').value,
+    join_date:      document.getElementById('edit-join').value,
+    bio:            document.getElementById('edit-bio').value,
+    activity_ids:   []
+  };
+  await fetch('api/trainers.php', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  closeModal('editModal'); loadTrainers();
+}
+
+async function deleteTrainer(id) {
+  if(!confirm('Delete this trainer?')) return;
+  await fetch(`api/trainers.php?id=${id}`, { method:'DELETE' });
+  loadTrainers();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+window.onclick = e => { if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); };
+
+document.getElementById('add-join').valueAsDate = new Date();
+loadActivities();
+loadTrainers();
+</script>
+</body></html>

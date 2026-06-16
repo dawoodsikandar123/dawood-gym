@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Attendance - Dawood Gym</title>
+<link rel="stylesheet" href="style.css">
+<script>if(!sessionStorage.getItem("loggedIn")){window.location.href="login.html";}</script>
+<style>
+.att-stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px;}
+.att-stat{flex:1;min-width:130px;background:rgba(18,24,41,0.65);border:1px solid #1e293b;border-radius:10px;padding:16px 20px;text-align:center;position:relative;overflow:hidden;}
+.att-stat::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;}
+.att-stat.total::before{background:#3b82f6;}
+.att-stat.present::before{background:#22c55e;}
+.att-stat.absent::before{background:#ef4444;}
+.att-stat .num{font-size:28px;font-weight:800;margin-bottom:4px;}
+.att-stat.total .num{color:#60a5fa;}
+.att-stat.present .num{color:#22c55e;}
+.att-stat.absent .num{color:#ef4444;}
+.att-stat .lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:#64748b;}
+.badge-present{background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.2);padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;text-transform:uppercase;}
+.badge-absent{background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.2);padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;text-transform:uppercase;}
+.month-filter-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.month-filter-bar select,.month-filter-bar input{padding:9px 14px;background:#070a14;border:1px solid #1e293b;border-radius:8px;color:#f1f5f9;font-family:inherit;font-size:13px;}
+</style>
+</head><body>
+<div class="sidebar">
+  <div class="logo">💪 Dawood Gym</div>
+  <a href="dashboard.html"><span>📊</span>Dashboard</a>
+  <a href="members.html"><span>👤</span>Members</a>
+  <a href="activities.html"><span>🏋️</span>Activities</a>
+  <a href="trainers.html"><span>🎽</span>Trainers</a>
+  <a href="attendance.html" class="active"><span>📋</span>Attendance</a>
+  <a href="payments.html"><span>💰</span>Payments</a>
+  <a href="#" onclick="sessionStorage.removeItem('loggedIn');window.location.href='login.html';"><span>🚪</span>Logout</a>
+</div>
+<div class="main">
+  <div class="page-title">📋 Attendance</div>
+
+  <!-- MARK -->
+  <div class="section" style="margin-bottom:22px;">
+    <h3 style="font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:18px;border-left:4px solid #c0392b;padding-left:10px;">✅ Mark Attendance</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Select Member</label><select id="att-member"></select></div>
+      <div class="form-group"><label>Date</label><input type="date" id="att-date"></div>
+      <div class="form-group"><label>Check-In Time (auto)</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="live-clock" style="padding:11px 14px;background:#070a14;border:1px solid #1e293b;border-radius:8px;color:#f1c40f;font-size:14px;font-weight:600;min-width:110px;">--:-- --</div>
+        </div>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="att-status"><option value="Present">Present</option><option value="Absent">Absent</option></select>
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="markAttendance()">Mark Attendance</button>
+    </div>
+  </div>
+
+  <!-- RECORDS -->
+  <div class="section">
+    <div class="section-header" style="flex-wrap:wrap;gap:12px;">
+      <h3 style="border-left:4px solid #c0392b;padding-left:10px;">📅 Attendance Records</h3>
+      <div class="month-filter-bar">
+        <input type="date" id="filter-date" onchange="onDateChange()" style="width:160px;">
+        <select id="filter-month" onchange="onMonthChange()">
+          <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+          <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select>
+        <input type="number" id="filter-year" value="2024" min="2020" max="2099" style="width:90px;" onchange="onMonthChange()">
+      </div>
+    </div>
+    <div class="att-stats" id="att-stats"></div>
+    <div id="present-section"></div>
+    <div id="absent-section"></div>
+    <p id="no-records" style="color:#64748b;text-align:center;padding:30px;display:none;">No records found.</p>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal" style="max-width:500px;">
+    <h3>✏️ Edit Attendance</h3>
+    <input type="hidden" id="edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Member</label><input type="text" id="edit-member" readonly style="opacity:0.6"></div>
+      <div class="form-group"><label>Date</label><input type="date" id="edit-date"></div>
+      <div class="form-group"><label>Check-In Time</label><input type="time" id="edit-time"></div>
+      <div class="form-group"><label>Status</label><select id="edit-status"><option value="Present">Present</option><option value="Absent">Absent</option></select></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+      <button class="btn btn-secondary" onclick="closeEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function getTimeAMPM() {
+  const now = new Date();
+  const h = now.getHours(), m = String(now.getMinutes()).padStart(2,'0');
+  return `${(h%12)||12}:${m} ${h<12?'AM':'PM'}`;
+}
+function tickClock() { document.getElementById('live-clock').textContent = getTimeAMPM(); }
+
+function onDateChange() {
+  // Clear month/year when date selected
+  loadAttendance();
+}
+
+function onMonthChange() {
+  // Clear date when month/year selected
+  document.getElementById('filter-date').value = '';
+  loadAttendance();
+}
+
+async function loadMembers() {
+  const res  = await fetch('api/members.php?action=list');
+  const data = await res.json();
+  document.getElementById('att-member').innerHTML = data.map(m =>
+    `<option value="${m.id}">${m.full_name}</option>`).join('');
+}
+
+async function loadAttendance() {
+  const date  = document.getElementById('filter-date').value;
+  const month = document.getElementById('filter-month').value;
+  const year  = document.getElementById('filter-year').value;
+
+  let url = date
+    ? `api/attendance.php?date=${date}`
+    : `api/attendance.php?month=${month}&year=${year}`;
+
+  const res  = await fetch(url);
+  const data = await res.json();
+
+  const present = data.filter(r => r.status === 'Present');
+  const absent  = data.filter(r => r.status === 'Absent');
+
+  document.getElementById('att-stats').innerHTML = `
+    <div class="att-stat total"><div class="num">${data.length}</div><div class="lbl">Total</div></div>
+    <div class="att-stat present"><div class="num">${present.length}</div><div class="lbl">Present</div></div>
+    <div class="att-stat absent"><div class="num">${absent.length}</div><div class="lbl">Absent</div></div>`;
+
+  if (!data.length) { document.getElementById('no-records').style.display='block'; return; }
+  document.getElementById('no-records').style.display='none';
+
+  const makeTable = (rows, showTime) => `<div class="table-wrap"><table style="width:100%;table-layout:fixed;">
+    <thead><tr>
+      <th style="width:12%;padding:12px 14px;text-align:left;">ID</th>
+      <th style="width:28%;padding:12px 14px;text-align:left;">Member</th>
+      <th style="width:18%;padding:12px 14px;text-align:left;">Date</th>
+      ${showTime?'<th style="width:15%;padding:12px 14px;text-align:left;">Time</th>':''}
+      <th style="width:13%;padding:12px 14px;text-align:left;">Status</th>
+      <th style="width:14%;padding:12px 14px;text-align:left;">Action</th>
+    </tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td style="padding:12px 14px;white-space:nowrap;">${r.attendance_code}</td>
+      <td style="padding:12px 14px;white-space:nowrap;">${r.member_name}</td>
+      <td style="padding:12px 14px;white-space:nowrap;">${r.att_date}</td>
+      ${showTime?`<td style="padding:12px 14px;white-space:nowrap;">${r.check_in_time||'—'}</td>`:''}
+      <td style="padding:12px 14px;"><span class="${r.status==='Present'?'badge-present':'badge-absent'}">${r.status}</span></td>
+      <td style="padding:12px 14px;white-space:nowrap;"><button class="btn-edit" onclick="openEdit(${r.id},'${r.member_name}','${r.att_date}','${r.check_in_time||''}','${r.status}')">Edit</button></td>
+    </tr>`).join('')}</tbody></table></div>`;
+
+  document.getElementById('present-section').innerHTML = present.length
+    ? `<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#22c55e;margin-bottom:8px;">✅ Present (${present.length})</p>${makeTable(present,true)}` : '';
+  document.getElementById('absent-section').innerHTML = absent.length
+    ? `<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#ef4444;margin:16px 0 8px;">❌ Absent (${absent.length})</p>${makeTable(absent,false)}` : '';
+}
+
+async function markAttendance() {
+  const status = document.getElementById('att-status').value;
+  const now    = new Date();
+  const data = {
+    member_id:      document.getElementById('att-member').value,
+    att_date:       document.getElementById('att-date').value,
+    check_in_time:  status==='Present' ? `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:00` : null,
+    status
+  };
+  if (!data.att_date) { alert('Select date!'); return; }
+  await fetch('api/attendance.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  loadAttendance();
+}
+
+function openEdit(id, member, date, time, status) {
+  document.getElementById('edit-id').value     = id;
+  document.getElementById('edit-member').value = member;
+  document.getElementById('edit-date').value   = date;
+  document.getElementById('edit-status').value = status;
+  document.getElementById('edit-time').value   = time ? time.substring(0,5) : '';
+  document.getElementById('editModal').classList.add('open');
+}
+
+async function saveEdit() {
+  const timeRaw = document.getElementById('edit-time').value;
+  const data = {
+    id:             document.getElementById('edit-id').value,
+    att_date:       document.getElementById('edit-date').value,
+    status:         document.getElementById('edit-status').value,
+    check_in_time:  timeRaw ? timeRaw+':00' : null
+  };
+  await fetch('api/attendance.php', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  closeEdit(); loadAttendance();
+}
+
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); }
+window.onclick = e => { if(e.target.classList.contains('modal-overlay')) closeEdit(); };
+
+const now = new Date();
+document.getElementById('filter-month').value = now.getMonth()+1;
+document.getElementById('filter-year').value  = now.getFullYear();
+document.getElementById('att-date').valueAsDate = now;
+tickClock(); setInterval(tickClock, 1000);
+loadMembers(); loadAttendance();
+</script>
+</body></html>
